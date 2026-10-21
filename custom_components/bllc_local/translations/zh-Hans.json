@@ -1,0 +1,58 @@
+{
+  "title": "布朗新风（本地）",
+  "config": {
+    "step": {
+      "user": {
+        "title": "添加布朗新风",
+        "description": "填写新风的局域网 IPv4 地址。本地凭证留空时，会尝试读取设备已有凭证；不需要旧 App 或云端账号。",
+        "data": {
+          "host": "新风 IPv4 地址",
+          "name": "名称",
+          "passcode": "设备本地凭证（可留空）"
+        }
+      },
+      "reconfigure": {
+        "title": "更新本地连接",
+        "description": "新地址必须对应同一台新风。凭证留空表示沿用已保存的凭证。",
+        "data": {
+          "host": "新风 IPv4 地址",
+          "passcode": "新的本地凭证（可留空）"
+        }
+      },
+      "reauth_confirm": {
+        "title": "恢复本地认证",
+        "description": "填写已有的设备本地凭证，或留空以尝试从设备读取。此操作不会重置或重新配网。",
+        "data": {
+          "passcode": "设备本地凭证（可留空）"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "未能完成本地通信，请检查设备电源、IP 地址及局域网连通性。",
+      "invalid_host": "请填写局域网 IPv4 地址。",
+      "invalid_auth": "本地凭证不可读取或未通过验证，请提供已有的设备本地凭证。",
+      "unsupported_device": "此产品或协议尚未通过本集成验证。",
+      "wrong_device": "这个地址对应另一台新风，无法替换当前设备。"
+    },
+    "abort": {
+      "already_configured": "这台新风已经添加。",
+      "reconfigure_successful": "本地连接已更新。",
+      "reauth_successful": "本地认证已恢复。"
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "温度"
+      },
+      "humidity": {
+        "name": "湿度"
+      }
+    }
+  },
+  "exceptions": {
+    "control_failed": {
+      "message": "设备未确认所请求的运行模式，将重新读取设备状态。"
+    }
+  }
+}

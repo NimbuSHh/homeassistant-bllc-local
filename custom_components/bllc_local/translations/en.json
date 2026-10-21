@@ -1,0 +1,58 @@
+{
+  "title": "BLLC Local",
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add a BLLC ventilator",
+        "description": "Connect directly to its private LAN IPv4 address. Leave the passcode blank to request the device’s existing local credential. No cloud account or app is used.",
+        "data": {
+          "host": "Device IPv4 address",
+          "name": "Name",
+          "passcode": "Local device passcode (optional)"
+        }
+      },
+      "reconfigure": {
+        "title": "Update the local connection",
+        "description": "The address must identify the same ventilator. Leave the passcode blank to keep the stored credential.",
+        "data": {
+          "host": "Device IPv4 address",
+          "passcode": "New local passcode (optional)"
+        }
+      },
+      "reauth_confirm": {
+        "title": "Restore local device authentication",
+        "description": "Enter the existing local passcode, or leave it blank to request it from the device. This does not reset or re-pair the ventilator.",
+        "data": {
+          "passcode": "Local device passcode (optional)"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "The ventilator did not complete local communication. Check power, address and LAN connectivity.",
+      "invalid_host": "Enter a private LAN IPv4 address.",
+      "invalid_auth": "The local passcode is unavailable or was rejected. Supply the existing device passcode.",
+      "unsupported_device": "This product or protocol has not been verified for this integration.",
+      "wrong_device": "This address belongs to a different ventilator."
+    },
+    "abort": {
+      "already_configured": "This ventilator is already configured.",
+      "reconfigure_successful": "Local connection updated.",
+      "reauth_successful": "Local authentication restored."
+    }
+  },
+  "entity": {
+    "sensor": {
+      "temperature": {
+        "name": "Temperature"
+      },
+      "humidity": {
+        "name": "Humidity"
+      }
+    }
+  },
+  "exceptions": {
+    "control_failed": {
+      "message": "The requested mode could not be confirmed by the ventilator. Its state will be refreshed from the device."
+    }
+  }
+}

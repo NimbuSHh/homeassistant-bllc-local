@@ -3,14 +3,16 @@
 from dataclasses import replace
 from pathlib import Path
 import shutil
+from unittest.mock import AsyncMock
 
 import pytest
 import pytest_asyncio
 
 from homeassistant.config_entries import ConfigEntries, ConfigEntryState
-from homeassistant.core import HomeAssistant
+from homeassistant.core import HomeAssistant, State
 from homeassistant import loader, bootstrap
 from homeassistant.exceptions import HomeAssistantError
+from homeassistant.helpers.restore_state import RestoreEntity
 
 from custom_components.bllc_local import config_flow, coordinator
 from custom_components.bllc_local.const import DOMAIN, PRODUCT_KEY
@@ -92,9 +94,12 @@ async def test_load_controls_sensors_and_unload(environment):
     assert fans[0].state == "on"
     assert fans[0].attributes["percentage"] == 100
     assert sorted(s.state for s in hass.states.async_all("sensor")) == ["23.5", "55"]
-    for percentage, mode in [(33, "3"), (66, "2"), (100, "1"), (0, "5")]:
+    assert fans[0].attributes["percentage_step"] == 50
+    assert fans[0].attributes["preset_modes"] == ["intermittent"]
+    for percentage, mode in [(1, "2"), (33, "2"), (50, "2"), (51, "1"), (66, "1"), (100, "1"), (0, "5")]:
         await hass.services.async_call("fan", "set_percentage", {"entity_id": entity_id, "percentage": percentage}, blocking=True)
         assert devices["192.168.50.10"].status.mode == mode
+        assert hass.states.get(entity_id).attributes["preset_mode"] is None
     await hass.services.async_call("fan", "turn_on", {"entity_id": entity_id}, blocking=True)
     assert devices["192.168.50.10"].status.mode == "1"
     client = entry.runtime_data.client
@@ -102,6 +107,66 @@ async def test_load_controls_sensors_and_unload(environment):
     assert entry.state is ConfigEntryState.NOT_LOADED
     assert hass.states.get(entity_id).state == "unavailable"
     assert client.closed
+
+
+@pytest.mark.asyncio
+async def test_intermittent_is_a_preset_not_a_speed(environment):
+    hass, devices = environment
+    entry = await add_device(hass)
+    entity_id = hass.states.async_all("fan")[0].entity_id
+    device = devices["192.168.50.10"]
+    await hass.services.async_call("fan", "set_preset_mode", {"entity_id": entity_id, "preset_mode": "intermittent"}, blocking=True)
+    state = hass.states.get(entity_id)
+    assert device.status.mode == "3"
+    assert state.state == "on"
+    assert state.attributes["preset_mode"] == "intermittent"
+    assert state.attributes["percentage"] is None
+    await hass.services.async_call("fan", "turn_off", {"entity_id": entity_id}, blocking=True)
+    assert hass.states.get(entity_id).attributes["preset_mode"] is None
+    await hass.services.async_call("fan", "turn_on", {"entity_id": entity_id}, blocking=True)
+    assert device.status.mode == "3"  # Restore the actual previous operating mode.
+    await hass.services.async_call("fan", "set_percentage", {"entity_id": entity_id, "percentage": 50}, blocking=True)
+    assert device.status.mode == "2"
+    assert hass.states.get(entity_id).attributes["preset_mode"] is None
+    await hass.services.async_call("fan", "turn_on", {"entity_id": entity_id, "preset_mode": "intermittent"}, blocking=True)
+    assert device.status.mode == "3"
+    writes = device.writes.copy()
+    with pytest.raises(HomeAssistantError):
+        await hass.services.async_call("fan", "set_preset_mode", {"entity_id": entity_id, "preset_mode": "medium"}, blocking=True)
+    assert device.writes == writes
+    # A wall-panel change must also leave intermittent mode in HA.
+    device.status = replace(device.status, mode="1")
+    await entry.runtime_data.async_refresh()
+    assert hass.states.get(entity_id).attributes["preset_mode"] is None
+    assert hass.states.get(entity_id).attributes["percentage"] == 100
+
+
+@pytest.mark.parametrize("attribute", ["last_on_mode", "last_manual_mode"])
+@pytest.mark.parametrize("mode", ["1", "2", "3"])
+@pytest.mark.asyncio
+async def test_restore_operating_mode_including_v010_state(environment, monkeypatch, attribute, mode):
+    hass, devices = environment
+    device = devices["192.168.50.10"]
+    device.status = replace(device.status, mode="5")
+    monkeypatch.setattr(RestoreEntity, "async_get_last_state", AsyncMock(return_value=State("fan.ventilator_a", "off", {attribute: mode})))
+    await add_device(hass)
+    entity_id = hass.states.async_all("fan")[0].entity_id
+    assert device.writes == []  # Loading and migration must not change the device.
+    await hass.services.async_call("fan", "turn_on", {"entity_id": entity_id}, blocking=True)
+    assert device.status.mode == mode
+
+
+@pytest.mark.asyncio
+async def test_unknown_mode_is_not_assigned_a_speed_or_preset(environment):
+    hass, devices = environment
+    device = devices["192.168.50.10"]
+    device.status = replace(device.status, mode="4")
+    await add_device(hass)
+    state = hass.states.async_all("fan")[0]
+    assert state.attributes["device_mode"] == "4"
+    assert state.attributes["percentage"] is None
+    assert state.attributes["preset_mode"] is None
+    assert device.writes == []
 
 
 @pytest.mark.asyncio

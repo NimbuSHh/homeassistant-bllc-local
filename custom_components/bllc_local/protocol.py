@@ -19,7 +19,7 @@ import socket
 import struct
 from typing import AsyncIterator
 
-from .const import MANUAL_MODES, MODE_OFF, PRODUCT_KEY, TCP_PORT, UDP_PORT
+from .const import MODE_OFF, OPERATING_MODES, PRODUCT_KEY, TCP_PORT, UDP_PORT
 
 PREFIX = b"\x00\x00\x00\x03"
 REQUEST_TIMEOUT = 4.0
@@ -205,8 +205,8 @@ def parse_status(payload: bytes) -> Status:
 
 
 def mode_payload(mode: str, current: Status) -> bytes:
-    if mode not in (*MANUAL_MODES, MODE_OFF):
-        raise ValueError("Only the verified manual modes and off may be selected")
+    if mode not in (*OPERATING_MODES, MODE_OFF):
+        raise ValueError("Only the verified operating modes and off may be selected")
     if len(current.timer_raw) != 12 or not 0 <= current.filter_raw <= 255:
         raise ProtocolError("Invalid current writable data")
     # Standard P0 requires the complete 14-byte writable data area, even when
@@ -370,8 +370,8 @@ class BllcClient:
 
     async def set_mode(self, mode: str) -> Status:
         """Write only Mode, then confirm it from a fresh device status reply."""
-        if mode not in (*MANUAL_MODES, MODE_OFF):
-            raise ValueError("Only the verified manual modes and off may be selected")
+        if mode not in (*OPERATING_MODES, MODE_OFF):
+            raise ValueError("Only the verified operating modes and off may be selected")
         async with self._lock:
             before = await self._read_status_with_reconnect()
             if before.mode == mode:

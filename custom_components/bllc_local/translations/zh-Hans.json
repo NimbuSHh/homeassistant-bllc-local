@@ -48,6 +48,17 @@
       "humidity": {
         "name": "湿度"
       }
+    },
+    "fan": {
+      "ventilator": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "intermittent": "间歇"
+            }
+          }
+        }
+      }
     }
   },
   "exceptions": {

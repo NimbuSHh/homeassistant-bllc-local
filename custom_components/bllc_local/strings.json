@@ -48,6 +48,17 @@
       "humidity": {
         "name": "Humidity"
       }
+    },
+    "fan": {
+      "ventilator": {
+        "state_attributes": {
+          "preset_mode": {
+            "state": {
+              "intermittent": "Intermittent"
+            }
+          }
+        }
+      }
     }
   },
   "exceptions": {
